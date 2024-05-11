@@ -30,14 +30,14 @@ typedef struct varlist	// variable reference (used for print statement)
 
 typedef struct expr	// boolean expression
 {
-	int type;	// TRUE, FALSE, OR, AND, NOT, 0 (variable)
+	int type;	// TRUE, FALSE, +, -
 	var *var;
 	struct expr *left, *right;
 } expr;
 
 typedef struct stmt	// command
 {
-	int type;	// ASSIGN, ';', WHILE, PRINT
+	int type;	// ASSIGN, ';', WHILE, PRINT, IF
 	var *var;
 	expr *expr;
 	struct stmt *left, *right;
@@ -53,7 +53,7 @@ stmt *program_stmts;
 /****************************************************************************/
 /* Functions for settting up data structures at parse time.                 */
 
-var* make_ident (char *s)
+var* make_var (char *s)
 {
 	var *v = malloc(sizeof(var));
 	v->name = s;
@@ -62,7 +62,7 @@ var* make_ident (char *s)
 	return v;
 }
 
-var* find_ident (char *s)
+var* find_var (char *s)
 {
 	var *v = program_vars;
 	while (v && strcmp(v->name,s)) v = v->next;
@@ -72,7 +72,7 @@ var* find_ident (char *s)
 
 varlist* make_varlist (char *s)
 {
-	var *v = find_ident(s);
+	var *v = find_var(s);
 	varlist *l = malloc(sizeof(varlist));
 	l->var = v;
 	l->next = NULL;
@@ -122,14 +122,10 @@ stmt* make_stmt (int type, var *var, expr *expr,
 %type <e> expr
 %type <s> stmt assign
 
-%token BOOL WHILE DO OD ASSIGN PRINT OR AND XOR NOT TRUE FALSE IFF IF THEN ELSE FI
-%token <i> IDENT
+%token S_BEGIN S_END START_COMMENT END_COMMENT SEQ TRUE FALSE EQUAL INT GREATER PLUS MINUS VAR DEF ASSIGN WHILE IF ELSE PRINT RANDOM STRATEGY RETURN
+%token <i> VAR
 
-%left ';'
-%left IFF
-%left OR XOR
-%left AND
-%right NOT
+%left SEQ
 
 %%
 
@@ -137,8 +133,8 @@ prog	: bools stmt	{ program_stmts = $2; }
 
 bools	: BOOL declist ';'	{ program_vars = $2; }
 
-declist	: IDENT			{ $$ = make_ident($1); }
-	| declist ',' IDENT	{ ($$ = make_ident($3))->next = $1; }
+declist	: VAR			{ $$ = make_var($1); }
+	| declist ',' VAR	{ ($$ = make_var($3))->next = $1; }
 
 stmt	: assign
 	| stmt ';' stmt	
@@ -152,13 +148,13 @@ stmt	: assign
 	| IF expr THEN stmt FI
 		{ $$ = make_stmt(IF,NULL,$2,$4,NULL,NULL); }
 
-assign	: IDENT ASSIGN expr
-		{ $$ = make_stmt(ASSIGN,find_ident($1),$3,NULL,NULL,NULL); }
+assign	: VAR ASSIGN expr
+		{ $$ = make_stmt(ASSIGN,find_var($1),$3,NULL,NULL,NULL); }
 
-varlist	: IDENT			{ $$ = make_varlist($1); }
-	| IDENT ',' varlist	{ ($$ = make_varlist($1))->next = $3; }
+varlist	: VAR			{ $$ = make_varlist($1); }
+	| VAR ',' varlist	{ ($$ = make_varlist($1))->next = $3; }
 
-expr	: IDENT		{ $$ = make_expr(0,find_ident($1),NULL,NULL); }
+expr	: VAR		{ $$ = make_expr(0,find_var($1),NULL,NULL); }
 	| expr XOR expr	{ $$ = make_expr(XOR,NULL,$1,$3); }
 	| expr OR expr	{ $$ = make_expr(OR,NULL,$1,$3); }
 	| expr AND expr	{ $$ = make_expr(AND,NULL,$1,$3); }

@@ -841,23 +841,23 @@ YY_RULE_SETUP
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 26 "interplex.l"
-{ yylval.i = strdup(yytext); return IDENT; }
+#line 28 "interplex.l"
+{ yylval.i = strdup(yytext); return VAR; }
 	YY_BREAK
 case 19:
 /* rule 19 can match eol */
 YY_RULE_SETUP
-#line 28 "interplex.l"
+#line 30 "interplex.l"
 { /* ignore */ }
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 30 "interplex.l"
+#line 32 "interplex.l"
 { return *yytext; }
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 32 "interplex.l"
+#line 34 "interplex.l"
 ECHO;
 	YY_BREAK
 #line 864 "<stdout>"
@@ -1865,7 +1865,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 32 "interplex.l"
+#line 34 "interplex.l"
 
 
 

@@ -33,8 +33,10 @@ Strategy Majority		# dÃ©cide en fonction de la majoritÃ©
 	def good = 0
 	def bad = 0
 
-	if last == Honest good = good+1;
-	if last == Cheat bad = bad+1;
+	if last == Honest
+		good = good+1;
+	if last == Cheat
+		bad = bad+1;
 	if good >= bad
 		return Honest
 	else
