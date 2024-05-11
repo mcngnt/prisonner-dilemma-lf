@@ -1,0 +1,8 @@
+bool x,y,z;
+
+while !(x && y && z) do
+	print x,y,z;
+	x := x ^ (y && z);
+	y := y ^ z;
+	z := !z
+od
