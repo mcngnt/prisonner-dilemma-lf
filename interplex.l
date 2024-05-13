@@ -7,14 +7,16 @@
 // SEQ apparait entre if et else
 // Double SEQ
 
-#define DEBUG
+// #define DEBUG
 
 
-#ifdef DEBUG
+// #ifdef DEBUG
+// #define DEBUG_PRINT(token) printf(token);
+// #else
+// #define DEBUG_PRINT(token) 
+// #endif
+
 #define DEBUG_PRINT(token) printf(token);
-#else
-#define DEBUG_PRINT(token) 
-#endif
 
 
 #ifdef DEBUG
@@ -40,7 +42,6 @@
 #define VAR 19
 #define INT 20
 
-
 #endif
 
 int current_line_indent = 0;
@@ -60,8 +61,8 @@ int has_var_been_stored = 0;
 DIG	[0-9]
 
 
+%x normal
 %s indent
-%s normal
 
 %%
 
@@ -165,8 +166,11 @@ DIG	[0-9]
 							}
 							else
 							{
-								has_var_been_stored = 1;
-								stored_var = yytext;
+								if(!has_var_been_stored)
+								{
+									has_var_been_stored = 1;
+									stored_var = strdup(yytext);
+								}
 								#ifndef DEBUG
 									yylval.i = strdup(yytext);
 								#endif
@@ -183,7 +187,7 @@ DIG	[0-9]
 			{
 				is_var_to_print = 0;
 				#ifndef DEBUG
-					yylval.i = strdup(stored_var);
+					yylval.i = stored_var;
 				#endif
 				DEBUG_PRINT("VAR "); return VAR;
 			}
@@ -193,31 +197,38 @@ DIG	[0-9]
 				DEBUG_PRINT("SEQ "); return SEQ;
 			}
 		}
-		return *yytext;
 	}
 
 
 
-
 <<EOF>> { 
-					if(current_line_indent > 0 || indent_level > 0)
-					{
-						current_line_indent--;
-						indent_level--;
-						DEBUG_PRINT("S_END ");
-						return S_END;
-					}
-					return 0;
-				}
+			if(current_line_indent > 0 || indent_level > 0)
+			{
+				current_line_indent--;
+				indent_level--;
+				DEBUG_PRINT("S_END "); return S_END;
+			}
+			else
+			{
+				DEBUG_PRINT("\n");
+				return 0;
+			}
+		}
 
 %%
+
+
+void init()
+{
+    BEGIN normal;
+}
 
 #ifdef DEBUG
 
 int main (int argc, char **argv)
 {
+	init();
 	if (argc > 1) yyin = fopen(argv[1],"r");
-	BEGIN normal;
 	for (int i = 0; i < 100; ++i)
 	{
 		yylex();

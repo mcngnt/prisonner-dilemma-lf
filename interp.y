@@ -60,7 +60,7 @@ var* make_var (char *s)
 {
 	var *v = malloc(sizeof(var));
 	v->name = s;
-	v->value = 0;	// make variable false initially
+	v->value = 0;
 	v->next = NULL;
 	return v;
 }
@@ -123,7 +123,6 @@ stmt* make_stmt (int type, var *var, expr *expr,
 }
 
 %type <v> def
-%type <l> varlist
 %type <e> expr
 %type <s> stmt assign
 
@@ -135,35 +134,47 @@ stmt* make_stmt (int type, var *var, expr *expr,
 
 %%
 
-prog : def stmt	{ program_stmts = $2; }
+prog : def stmt	{ program_stmts = $2; program_vars = NULL; }
 
 // bools	: BOOL declist ';'	{ program_vars = $2; }
 
 // declist	: VAR			{ $$ = make_var($1); }
 // 	| declist ',' VAR	{ ($$ = make_var($3))->next = $1; }
 
-stmt : assign
+def : DEF VAR SEQ
+	{
+		// printf(" created %s ",$2);
+
+		if(!program_vars)
+		{
+			program_vars = make_var($2);
+		}
+		// $$ = program_vars;
+		$$ = program_vars;
+	}
+
+stmt : 
+	|assign
 	| stmt SEQ stmt
-		{ $$ = make_stmt(';',NULL,NULL,$1,$3,NULL); }
+		{ $$ = make_stmt(SEQ,NULL,NULL,$1,$3,NULL); }
 	| WHILE expr S_BEGIN stmt S_END
 		{ $$ = make_stmt(WHILE,NULL,$2,$4,NULL,NULL); }
-	| PRINT varlist
-		{ $$ = make_stmt(PRINT,NULL,NULL,NULL,NULL,$2); }
+	| PRINT VAR
+		{ $$ = make_stmt(PRINT,find_var($2),NULL,NULL,NULL,NULL); }
 	| IF expr S_BEGIN stmt S_END ELSE S_BEGIN stmt S_END
 		{ $$ = make_stmt(ELSE,NULL,$2,$4,$8,NULL); }
 	| IF expr S_BEGIN stmt S_END
 		{ $$ = make_stmt(IF,NULL,$2,$4,NULL,NULL); }
 
-def : DEF VAR SEQ
-	{
-		$$ = make_var($2);
-	}
 
 assign	: VAR ASSIGN expr
-		{ $$ = make_stmt(ASSIGN,find_var($1),$3,NULL,NULL,NULL); }
+		{
+			// printf(" search -%s- ",$1);
+			$$ = make_stmt(ASSIGN,find_var($1),$3,NULL,NULL,NULL);
+		}
 
-varlist	: VAR			{ $$ = make_varlist($1); }
-	| VAR ',' varlist	{ ($$ = make_varlist($1))->next = $3; }
+// varlist	: VAR			{ $$ = make_varlist($1); }
+// 	| VAR ',' varlist	{ ($$ = make_varlist($1))->next = $3; }
 
 expr : VAR		{ $$ = make_expr(0,0,find_var($1),NULL,NULL); }
 	| INT		{ $$ = make_expr(INT,$1,NULL,NULL,NULL); }
@@ -181,14 +192,13 @@ int eval (expr *e)
 	switch (e->type)
 	{
 		case 0: return e->var->value;
+		case INT : return e->value;
 	}
 }
 
-void print_vars (varlist *l)
+void print_var (var *v)
 {
-	if (!l) return;
-	print_vars(l->next);
-	printf("%s = %d  ", l->var->name, l->var->value);
+	printf("%s = %d  ", v->name, v->value);
 }
 
 void execute (stmt *s)
@@ -198,7 +208,7 @@ void execute (stmt *s)
 		case ASSIGN:
 			s->var->value = eval(s->expr);
 			break;
-		case ';':
+		case SEQ:
 			execute(s->left);
 			execute(s->right);
 			break;
@@ -206,7 +216,7 @@ void execute (stmt *s)
 			while (eval(s->expr)) execute(s->left);
 			break;
 		case PRINT: 
-			print_vars(s->list);
+			print_var(s->var);
 			puts("");
 			break;
 		case IF:
@@ -223,9 +233,10 @@ void execute (stmt *s)
 
 int main (int argc, char **argv)
 {
+	init();
 	if (argc <= 1) { yyerror("no file specified"); exit(1); }
 	yyin = fopen(argv[1],"r");
-	// if (!yyparse()) execute(program_stmts);
-	yyparse();
+	if (!yyparse()) execute(program_stmts);
+	// if (!yyparse()) printf("\nSuccess\n"); else printf("\nFailure\n");
 	return 0;
 }
