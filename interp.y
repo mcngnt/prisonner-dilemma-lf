@@ -1,3 +1,5 @@
+%error-verbose
+
 %{
 
 #include <stdio.h>
@@ -30,7 +32,8 @@ typedef struct varlist	// variable reference (used for print statement)
 
 typedef struct expr	// boolean expression
 {
-	int type;	// TRUE, FALSE, +, -
+	int type;
+	int value;
 	var *var;
 	struct expr *left, *right;
 } expr;
@@ -79,10 +82,11 @@ varlist* make_varlist (char *s)
 	return l;
 }
 
-expr* make_expr (int type, var *var, expr *left, expr *right)
+expr* make_expr (int type,int value, var *var, expr *left, expr *right)
 {
 	expr *e = malloc(sizeof(expr));
 	e->type = type;
+	e->value = value;
 	e->var = var;
 	e->left = left;
 	e->right = right;
@@ -115,38 +119,45 @@ stmt* make_stmt (int type, var *var, expr *expr,
 	varlist *l;
 	expr *e;
 	stmt *s;
+	int x;
 }
 
-%type <v> declist
+%type <v> def
 %type <l> varlist
 %type <e> expr
 %type <s> stmt assign
 
-%token S_BEGIN S_END START_COMMENT END_COMMENT SEQ TRUE FALSE EQUAL INT GREATER PLUS MINUS VAR DEF ASSIGN WHILE IF ELSE PRINT RANDOM STRATEGY RETURN
+%token S_BEGIN S_END START_COMMENT END_COMMENT SEQ EQUAL LESS PLUS MINUS DEF ASSIGN WHILE IF ELSE PRINT RANDOM STRATEGY RETURN
 %token <i> VAR
+%token <x> INT
 
 %left SEQ
 
 %%
 
-prog	: bools stmt	{ program_stmts = $2; }
+prog : def stmt	{ program_stmts = $2; }
 
-bools	: BOOL declist ';'	{ program_vars = $2; }
+// bools	: BOOL declist ';'	{ program_vars = $2; }
 
-declist	: VAR			{ $$ = make_var($1); }
-	| declist ',' VAR	{ ($$ = make_var($3))->next = $1; }
+// declist	: VAR			{ $$ = make_var($1); }
+// 	| declist ',' VAR	{ ($$ = make_var($3))->next = $1; }
 
-stmt	: assign
-	| stmt ';' stmt	
+stmt : assign
+	| stmt SEQ stmt
 		{ $$ = make_stmt(';',NULL,NULL,$1,$3,NULL); }
-	| WHILE expr DO stmt OD
+	| WHILE expr S_BEGIN stmt S_END
 		{ $$ = make_stmt(WHILE,NULL,$2,$4,NULL,NULL); }
 	| PRINT varlist
 		{ $$ = make_stmt(PRINT,NULL,NULL,NULL,NULL,$2); }
-	| IF expr THEN stmt ELSE stmt FI
-		{ $$ = make_stmt(ELSE,NULL,$2,$4,$6,NULL); }
-	| IF expr THEN stmt FI
+	| IF expr S_BEGIN stmt S_END ELSE S_BEGIN stmt S_END
+		{ $$ = make_stmt(ELSE,NULL,$2,$4,$8,NULL); }
+	| IF expr S_BEGIN stmt S_END
 		{ $$ = make_stmt(IF,NULL,$2,$4,NULL,NULL); }
+
+def : DEF VAR SEQ
+	{
+		$$ = make_var($2);
+	}
 
 assign	: VAR ASSIGN expr
 		{ $$ = make_stmt(ASSIGN,find_var($1),$3,NULL,NULL,NULL); }
@@ -154,15 +165,9 @@ assign	: VAR ASSIGN expr
 varlist	: VAR			{ $$ = make_varlist($1); }
 	| VAR ',' varlist	{ ($$ = make_varlist($1))->next = $3; }
 
-expr	: VAR		{ $$ = make_expr(0,find_var($1),NULL,NULL); }
-	| expr XOR expr	{ $$ = make_expr(XOR,NULL,$1,$3); }
-	| expr OR expr	{ $$ = make_expr(OR,NULL,$1,$3); }
-	| expr AND expr	{ $$ = make_expr(AND,NULL,$1,$3); }
-	| NOT expr	{ $$ = make_expr(NOT,NULL,$2,NULL); }
-	| TRUE		{ $$ = make_expr(TRUE,NULL,NULL,NULL); }
-	| FALSE		{ $$ = make_expr(FALSE,NULL,NULL,NULL); }
+expr : VAR		{ $$ = make_expr(0,0,find_var($1),NULL,NULL); }
+	| INT		{ $$ = make_expr(INT,$1,NULL,NULL,NULL); }
 	| '(' expr ')'	{ $$ = $2; }
-	| expr IFF expr	{ $$ = make_expr(IFF,NULL,$1,$3); }
 
 %%
 
@@ -175,14 +180,7 @@ int eval (expr *e)
 {
 	switch (e->type)
 	{
-		case TRUE: return 1;
-		case FALSE: return 0;
-		case XOR: return eval(e->left) ^ eval(e->right);
-		case OR: return eval(e->left) || eval(e->right);
-		case AND: return eval(e->left) && eval(e->right);
-		case NOT: return !eval(e->left);
 		case 0: return e->var->value;
-		case IFF: return eval(e->left) == eval(e->right);
 	}
 }
 
@@ -190,7 +188,7 @@ void print_vars (varlist *l)
 {
 	if (!l) return;
 	print_vars(l->next);
-	printf("%s = %c  ", l->var->name, l->var->value? 'T' : 'F');
+	printf("%s = %d  ", l->var->name, l->var->value);
 }
 
 void execute (stmt *s)
@@ -227,5 +225,7 @@ int main (int argc, char **argv)
 {
 	if (argc <= 1) { yyerror("no file specified"); exit(1); }
 	yyin = fopen(argv[1],"r");
-	if (!yyparse()) execute(program_stmts);
+	// if (!yyparse()) execute(program_stmts);
+	yyparse();
+	return 0;
 }
