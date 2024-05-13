@@ -122,11 +122,11 @@ stmt* make_stmt (int type, var *var, expr *expr,
 	int x;
 }
 
-%type <v> def
+%type <s> def
 %type <e> expr
 %type <s> stmt assign
 
-%token S_BEGIN S_END START_COMMENT END_COMMENT SEQ EQUAL LESS PLUS MINUS DEF ASSIGN WHILE IF ELSE PRINT RANDOM STRATEGY RETURN
+%token S_BEGIN S_END START_COMMENT END_COMMENT SEQ EQUAL LESS PLUS MINUS DEF ASSIGN WHILE IF ELSE PRINT RANDOM STRATEGY RETURN LAST UNDEF
 %token <i> VAR
 %token <x> INT
 
@@ -134,26 +134,33 @@ stmt* make_stmt (int type, var *var, expr *expr,
 
 %%
 
-prog : def stmt	{ program_stmts = $2; program_vars = NULL; }
+prog : stmt	{ program_stmts = $1; program_vars = NULL; }
 
-// bools	: BOOL declist ';'	{ program_vars = $2; }
 
 // declist	: VAR			{ $$ = make_var($1); }
 // 	| declist ',' VAR	{ ($$ = make_var($3))->next = $1; }
 
-def : DEF VAR SEQ
-	{
-		// printf(" created %s ",$2);
-
-		if(!program_vars)
-		{
-			program_vars = make_var($2);
-		}
-		// $$ = program_vars;
-		$$ = program_vars;
-	}
+def : DEF VAR
+    {
+        if(!program_vars)
+        {
+        	program_vars = make_var($2);
+        }
+        else
+        {
+        	var* v = program_vars;
+        	while(v->next)
+        	{
+        		v = v->next;
+        	}
+        	v->next = make_var($2);
+        }
+        
+        $$ = make_stmt(0,NULL,NULL,NULL,NULL,NULL);
+    }
 
 stmt : 
+	| def {}
 	|assign
 	| stmt SEQ stmt
 		{ $$ = make_stmt(SEQ,NULL,NULL,$1,$3,NULL); }
@@ -161,23 +168,24 @@ stmt :
 		{ $$ = make_stmt(WHILE,NULL,$2,$4,NULL,NULL); }
 	| PRINT VAR
 		{ $$ = make_stmt(PRINT,find_var($2),NULL,NULL,NULL,NULL); }
-	| IF expr S_BEGIN stmt S_END ELSE S_BEGIN stmt S_END
-		{ $$ = make_stmt(ELSE,NULL,$2,$4,$8,NULL); }
+	| IF expr S_BEGIN stmt S_END SEQ ELSE S_BEGIN stmt S_END
+		{ $$ = make_stmt(ELSE,NULL,$2,$4,$9,NULL); }
 	| IF expr S_BEGIN stmt S_END
 		{ $$ = make_stmt(IF,NULL,$2,$4,NULL,NULL); }
 
 
 assign	: VAR ASSIGN expr
 		{
-			// printf(" search -%s- ",$1);
 			$$ = make_stmt(ASSIGN,find_var($1),$3,NULL,NULL,NULL);
 		}
 
-// varlist	: VAR			{ $$ = make_varlist($1); }
-// 	| VAR ',' varlist	{ ($$ = make_varlist($1))->next = $3; }
 
 expr : VAR		{ $$ = make_expr(0,0,find_var($1),NULL,NULL); }
 	| INT		{ $$ = make_expr(INT,$1,NULL,NULL,NULL); }
+	| expr PLUS expr { $$ = make_expr(PLUS,NULL,NULL,$1,$3); }
+	| expr MINUS expr { $$ = make_expr(MINUS,NULL,NULL,$1,$3); }
+	| expr LESS expr { $$ = make_expr(LESS,NULL,NULL,$1,$3); }
+	| expr EQUAL expr { $$ = make_expr(EQUAL,NULL,NULL,$1,$3); }
 	| '(' expr ')'	{ $$ = $2; }
 
 %%
@@ -193,6 +201,10 @@ int eval (expr *e)
 	{
 		case 0: return e->var->value;
 		case INT : return e->value;
+		case PLUS : return eval(e->left) + eval(e->right);
+		case MINUS : return eval(e->left) - eval(e->right);
+		case EQUAL : return eval(e->left) == eval(e->right);
+		case LESS : return eval(e->left) <= eval(e->right);
 	}
 }
 

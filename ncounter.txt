@@ -1,2 +1,8 @@
-def x = 10
-print x
+def x = 7
+def y = 3
+if x == 0
+	x = 1
+else
+	x = 2
+def z = 19
+print z

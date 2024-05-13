@@ -127,6 +127,9 @@ DIG	[0-9]
 <normal>"Strategy"	{ DEBUG_PRINT("STRATEGY "); return STRATEGY; }
 <normal>"return"	{ DEBUG_PRINT("RETURN "); return RETURN; }
 
+<normal>"last"	{ DEBUG_PRINT("LAST "); return LAST; }
+<normal>"Undef"	{ DEBUG_PRINT("UNDEF "); return UNDEF; }
+
 
 <normal>{DIG}+	{
 					#ifndef DEBUG
