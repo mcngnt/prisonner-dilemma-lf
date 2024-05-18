@@ -6,6 +6,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+
+#define CHEAT 0
+#define HONEST 1
+#define UNDEF 2
+
 int yylex();
 
 void yyerror(char *s)
@@ -107,6 +112,12 @@ stmt* make_stmt (int type, var *var, expr *expr,
 }
 
 
+int current_result = 0;
+int found_strategy = 0;
+char* startegy_name;
+int last_move = UNDEF;
+
+
 %}
 
 /****************************************************************************/
@@ -126,7 +137,7 @@ stmt* make_stmt (int type, var *var, expr *expr,
 %type <e> expr
 %type <s> stmt assign
 
-%token S_BEGIN S_END START_COMMENT END_COMMENT SEQ EQUAL LESS PLUS MINUS DEF ASSIGN WHILE IF ELSE PRINT RANDOM STRATEGY RETURN LAST UNDEF
+%token S_BEGIN S_END SEQ EQUAL LESS PLUS MINUS DEF ASSIGN WHILE IF ELSE PRINT RANDOM STRATEGY RETURN LAST
 %token <i> VAR
 %token <x> INT
 
@@ -160,7 +171,7 @@ def : DEF VAR
     }
 
 stmt : 
-	| def {}
+	| def
 	|assign
 	| stmt SEQ stmt
 		{ $$ = make_stmt(SEQ,NULL,NULL,$1,$3,NULL); }
@@ -168,10 +179,14 @@ stmt :
 		{ $$ = make_stmt(WHILE,NULL,$2,$4,NULL,NULL); }
 	| PRINT VAR
 		{ $$ = make_stmt(PRINT,find_var($2),NULL,NULL,NULL,NULL); }
-	| IF expr S_BEGIN stmt S_END SEQ ELSE S_BEGIN stmt S_END
-		{ $$ = make_stmt(ELSE,NULL,$2,$4,$9,NULL); }
 	| IF expr S_BEGIN stmt S_END
 		{ $$ = make_stmt(IF,NULL,$2,$4,NULL,NULL); }
+	| IF expr S_BEGIN stmt S_END SEQ ELSE S_BEGIN stmt S_END
+		{ $$ = make_stmt(ELSE,NULL,$2,$4,$9,NULL); }
+	| STRATEGY VAR S_BEGIN stmt S_END
+		{ $$ = make_stmt(STRATEGY,make_var($2),NULL,$4,NULL,NULL); }
+	| RETURN expr
+		{ $$ = make_stmt(RETURN,NULL,$2,NULL,NULL,NULL); }
 
 
 assign	: VAR ASSIGN expr
@@ -187,6 +202,7 @@ expr : VAR		{ $$ = make_expr(0,0,find_var($1),NULL,NULL); }
 	| expr LESS expr { $$ = make_expr(LESS,NULL,NULL,$1,$3); }
 	| expr EQUAL expr { $$ = make_expr(EQUAL,NULL,NULL,$1,$3); }
 	| '(' expr ')'	{ $$ = $2; }
+	| LAST {$$ = make_expr(LAST,NULL,NULL,NULL,NULL);}
 
 %%
 
@@ -205,18 +221,32 @@ int eval (expr *e)
 		case MINUS : return eval(e->left) - eval(e->right);
 		case EQUAL : return eval(e->left) == eval(e->right);
 		case LESS : return eval(e->left) <= eval(e->right);
+		case LAST : return last_move;
 	}
 }
 
 void print_var (var *v)
 {
-	printf("%s = %d  ", v->name, v->value);
+	printf("%s = %d  \n", v->name, v->value);
 }
 
 void execute (stmt *s)
 {
 	switch(s->type)
 	{
+		case STRATEGY:
+			if(!found_strategy)
+			{
+				if (strcmp(startegy_name, s->var->name) == 0)
+				{
+					found_strategy = 1;
+				}
+				execute(s->left);
+			}
+			break;
+		case RETURN:
+			current_result = eval(s->expr);
+			break;
 		case ASSIGN:
 			s->var->value = eval(s->expr);
 			break;
@@ -241,6 +271,16 @@ void execute (stmt *s)
 	}
 }
 
+int execute_strategy(char* name, int last)
+{
+	found_strategy = 0;
+	startegy_name = name;
+	last_move = last;
+	printf("Strategy %s :  \n", name);
+	execute(program_stmts);
+	printf("Strategy Result : %d\n", current_result);
+}
+
 /****************************************************************************/
 
 int main (int argc, char **argv)
@@ -248,7 +288,11 @@ int main (int argc, char **argv)
 	init();
 	if (argc <= 1) { yyerror("no file specified"); exit(1); }
 	yyin = fopen(argv[1],"r");
-	if (!yyparse()) execute(program_stmts);
+	if (!yyparse())
+	{
+		printf("\n\n");
+		execute_strategy("Bad", CHEAT);
+	}
 	// if (!yyparse()) printf("\nSuccess\n"); else printf("\nFailure\n");
 	return 0;
 }

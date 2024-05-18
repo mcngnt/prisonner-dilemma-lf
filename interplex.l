@@ -3,7 +3,6 @@
 %{
 
 // TODO :
-// TEXT buggé commentaie (ex: TEXT MINUS TEXT)
 // SEQ apparait entre if et else
 // Double SEQ
 
@@ -23,8 +22,6 @@
 
 #define S_BEGIN 1
 #define S_END 2
-#define START_COMMENT 3
-#define END_COMMENT 4
 #define SEQ 5
 #define EQUAL 6
 #define LESS 7
@@ -41,14 +38,12 @@
 #define RETURN 18
 #define VAR 19
 #define INT 20
+#define LAST 21
 
 #endif
 
 int current_line_indent = 0;
 int indent_level = 0;
-int is_commenting = 0;
-
-int uncomment_to_print = 0;
 
 
 char* stored_var;
@@ -77,11 +72,6 @@ DIG	[0-9]
 				indent_level--;
 				DEBUG_PRINT("S_END "); return S_END;
 			}
-			else if(uncomment_to_print)
-			{
-				uncomment_to_print--;
-				DEBUG_PRINT("END_COMMENT "); return END_COMMENT;
-			}
 			else if(current_line_indent > indent_level)
 			{
 				BEGIN normal;
@@ -96,18 +86,15 @@ DIG	[0-9]
 
 
 <normal>"\n" {
-		if(is_commenting)
-		{
-			is_commenting = 0;
-			uncomment_to_print++;
-		}
 		indent_level =  current_line_indent;
 		current_line_indent = 0;
 		BEGIN indent;
 	 }
 
+<normal>";" {}
 
-<normal>"#"	{ is_commenting = 1; DEBUG_PRINT("START_COMMENT "); return START_COMMENT; }
+<normal>"#"[^\n]*"\n"	{ unput(*yytext); DEBUG_PRINT("SEQ "); return SEQ; }
+
 
 <normal>"==" { DEBUG_PRINT("EQUAL "); return EQUAL; }
 <normal>"<="	{DEBUG_PRINT("LESS "); return LESS; }
@@ -128,7 +115,6 @@ DIG	[0-9]
 <normal>"return"	{ DEBUG_PRINT("RETURN "); return RETURN; }
 
 <normal>"last"	{ DEBUG_PRINT("LAST "); return LAST; }
-<normal>"Undef"	{ DEBUG_PRINT("UNDEF "); return UNDEF; }
 
 
 <normal>{DIG}+	{
@@ -137,6 +123,14 @@ DIG	[0-9]
 					#endif
 					DEBUG_PRINT("INT "); return INT;
 				}
+
+<normal>"Undef"	{ 
+	#ifndef DEBUG
+		yylval.x = 2; 
+	#endif
+	DEBUG_PRINT("INT "); return INT;
+}
+
 <normal>"Cheat"	{
 					#ifndef DEBUG
 						yylval.x = 0; 
@@ -163,22 +157,16 @@ DIG	[0-9]
 				}
 
 
-<normal>[a-z_][a-z0-9_]* { 	if(is_commenting)
+<normal>[a-zA-Z_][a-zA-Z0-9_]* { 	
+							if(!has_var_been_stored)
 							{
-								DEBUG_PRINT("TEXT "); return *yytext;
+								has_var_been_stored = 1;
+								stored_var = strdup(yytext);
 							}
-							else
-							{
-								if(!has_var_been_stored)
-								{
-									has_var_been_stored = 1;
-									stored_var = strdup(yytext);
-								}
-								#ifndef DEBUG
-									yylval.i = strdup(yytext);
-								#endif
-								DEBUG_PRINT("VAR "); return VAR;
-							} 
+							#ifndef DEBUG
+								yylval.i = strdup(yytext);
+							#endif
+							DEBUG_PRINT("VAR1 "); return VAR; 
 						}
 
 
@@ -192,7 +180,7 @@ DIG	[0-9]
 				#ifndef DEBUG
 					yylval.i = stored_var;
 				#endif
-				DEBUG_PRINT("VAR "); return VAR;
+				DEBUG_PRINT("VAR2 "); return VAR;
 			}
 			else
 			{
@@ -213,7 +201,7 @@ DIG	[0-9]
 			}
 			else
 			{
-				DEBUG_PRINT("\n");
+				// DEBUG_PRINT("\n");
 				return 0;
 			}
 		}
@@ -232,7 +220,7 @@ int main (int argc, char **argv)
 {
 	init();
 	if (argc > 1) yyin = fopen(argv[1],"r");
-	for (int i = 0; i < 100; ++i)
+	for (int i = 0; i < 1000; ++i)
 	{
 		yylex();
 	}
