@@ -1,6 +1,6 @@
 Strategy Nice
 	def x = Honest
-	return last
+	return Honest
 
 
 Strategy Bad
@@ -8,10 +8,11 @@ Strategy Bad
 	return x
 
 
-Strategy Grim
-	def decision = Honest
-	if last == Cheat
-		decision = Cheat;
+
+
+Strategy Rand
+	if Random(2) < 1
+		return Cheat
 	else
-		
-	return decision
+		return Honest
+

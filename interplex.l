@@ -51,6 +51,8 @@ int is_var_to_print = 0;
 int has_seq_been_printed = 0;
 int has_var_been_stored = 0;
 
+int has_else_end_been_printed = 0;
+
 %}
 
 DIG	[0-9]
@@ -64,6 +66,8 @@ DIG	[0-9]
 
 
 <indent>"\t" { current_line_indent++ ;}
+
+
 
 <indent>. {
 			unput(*yytext);
@@ -97,7 +101,10 @@ DIG	[0-9]
 
 
 <normal>"==" { DEBUG_PRINT("EQUAL "); return EQUAL; }
-<normal>"<="	{DEBUG_PRINT("LESS "); return LESS; }
+<normal>"<"	{DEBUG_PRINT("LESS "); return LESS; }
+<normal>"<="	{DEBUG_PRINT("LESSEQ "); return LESSEQ; }
+<normal>">"	{DEBUG_PRINT("GREATER "); return GREATER; }
+<normal>">="	{DEBUG_PRINT("GREATEREQ "); return GREATEREQ; }
 <normal>"+"	{ DEBUG_PRINT("PLUS "); return PLUS; }
 <normal>"-"	{ DEBUG_PRINT("MINUS "); return MINUS; }
 

@@ -112,7 +112,7 @@ stmt* make_stmt (int type, var *var, expr *expr,
 }
 
 
-int current_result = 0;
+int current_result = -1;
 int found_strategy = 0;
 char* startegy_name;
 int last_move = UNDEF;
@@ -137,9 +137,14 @@ int last_move = UNDEF;
 %type <e> expr
 %type <s> stmt assign
 
-%token S_BEGIN S_END SEQ EQUAL LESS PLUS MINUS DEF ASSIGN WHILE IF ELSE PRINT RANDOM STRATEGY RETURN LAST
+%token S_BEGIN S_END SEQ EQUAL LESS LESSEQ GREATER GREATEREQ PLUS MINUS DEF ASSIGN WHILE IF ELSE PRINT RANDOM STRATEGY RETURN LAST
 %token <i> VAR
 %token <x> INT
+
+
+%nonassoc else_priority
+%nonassoc ELSE
+
 
 %left SEQ
 
@@ -148,27 +153,24 @@ int last_move = UNDEF;
 prog : stmt	{ program_stmts = $1; program_vars = NULL; }
 
 
-// declist	: VAR			{ $$ = make_var($1); }
-// 	| declist ',' VAR	{ ($$ = make_var($3))->next = $1; }
-
 def : DEF VAR
-    {
-        if(!program_vars)
-        {
-        	program_vars = make_var($2);
-        }
-        else
-        {
-        	var* v = program_vars;
-        	while(v->next)
-        	{
-        		v = v->next;
-        	}
-        	v->next = make_var($2);
-        }
-        
-        $$ = make_stmt(0,NULL,NULL,NULL,NULL,NULL);
-    }
+	{
+		if(!program_vars)
+		{
+			program_vars = make_var($2);
+		}
+		else
+		{
+			var* v = program_vars;
+			while(v->next)
+			{
+				v = v->next;
+			}
+			v->next = make_var($2);
+		}
+		
+		$$ = make_stmt(0,NULL,NULL,NULL,NULL,NULL);
+	}
 
 stmt : 
 	| def
@@ -179,7 +181,7 @@ stmt :
 		{ $$ = make_stmt(WHILE,NULL,$2,$4,NULL,NULL); }
 	| PRINT VAR
 		{ $$ = make_stmt(PRINT,find_var($2),NULL,NULL,NULL,NULL); }
-	| IF expr S_BEGIN stmt S_END
+	| IF expr S_BEGIN stmt S_END	%prec else_priority
 		{ $$ = make_stmt(IF,NULL,$2,$4,NULL,NULL); }
 	| IF expr S_BEGIN stmt S_END SEQ ELSE S_BEGIN stmt S_END
 		{ $$ = make_stmt(ELSE,NULL,$2,$4,$9,NULL); }
@@ -203,6 +205,9 @@ expr : VAR		{ $$ = make_expr(0,0,find_var($1),NULL,NULL); }
 	| expr EQUAL expr { $$ = make_expr(EQUAL,NULL,NULL,$1,$3); }
 	| '(' expr ')'	{ $$ = $2; }
 	| LAST {$$ = make_expr(LAST,NULL,NULL,NULL,NULL);}
+	| RANDOM INT
+		{ $$ = make_expr(RANDOM,NULL,NULL,make_expr(INT,$2,NULL,NULL,NULL),NULL); }
+
 
 %%
 
@@ -220,14 +225,18 @@ int eval (expr *e)
 		case PLUS : return eval(e->left) + eval(e->right);
 		case MINUS : return eval(e->left) - eval(e->right);
 		case EQUAL : return eval(e->left) == eval(e->right);
-		case LESS : return eval(e->left) <= eval(e->right);
+		case LESS : return eval(e->left) < eval(e->right);
+		case LESSEQ : return eval(e->left) <= eval(e->right);
+		case GREATER : return eval(e->left) > eval(e->right);
+		case GREATEREQ : return eval(e->left) >= eval(e->right);
 		case LAST : return last_move;
+		case RANDOM : return rand() % (eval(e->left));
 	}
 }
 
 void print_var (var *v)
 {
-	printf("%s = %d  \n", v->name, v->value);
+	printf("%s = %d\n", v->name, v->value);
 }
 
 void execute (stmt *s)
@@ -246,6 +255,7 @@ void execute (stmt *s)
 			break;
 		case RETURN:
 			current_result = eval(s->expr);
+			return;
 			break;
 		case ASSIGN:
 			s->var->value = eval(s->expr);
@@ -276,23 +286,100 @@ int execute_strategy(char* name, int last)
 	found_strategy = 0;
 	startegy_name = name;
 	last_move = last;
-	printf("Strategy %s :  \n", name);
+	current_result = UNDEF;
+	// printf("Strategy %s :  \n", name);
 	execute(program_stmts);
-	printf("Strategy Result : %d\n", current_result);
+	if(found_strategy == 0)
+	{
+		printf("Strategy %s not found\n", name);
+	}
+	// printf("Strategy Result : %d\n", current_result);
+	return current_result;
+}
+
+
+void strategy_fight(char* name1, char* name2)
+{
+	int last1 = UNDEF;
+	int last2 = UNDEF;
+	int points1 = 0;
+	int points2 = 0;
+
+	int steps = 10;
+	int rewardHH = 3;
+	int rewardHC = 0;
+	int rewardCH = 5;
+	int rewardCC = 1;
+
+	for (int i = 0; i < steps; ++i)
+	{
+		int templast1 = last1;
+		int templast2 = last2;
+		last1 = execute_strategy(name1, templast2);
+		last2 = execute_strategy(name2, templast1);
+		if(last1 == HONEST)
+		{
+			if(last2 == HONEST)
+			{
+				points1 += rewardHH;
+				points2 += rewardHH;
+			}
+			else
+			{
+				points1 += rewardHC;
+				points2 += rewardCH;
+			}
+		}
+		else
+		{
+			if(last2 == HONEST)
+			{
+				points1 += rewardCH;
+				points2 += rewardHC;
+			}
+			else
+			{
+				points1 += rewardCC;
+				points2 += rewardCC;
+			}
+		}
+	}
+
+	printf("Results : \n %s : %d points\n%s : %d points\n", name1, points1, name2, points2);
 }
 
 /****************************************************************************/
 
+
+void remove_leading_newline(char *str)
+{
+	if (str[0] == '\n') 
+	{
+		memmove(str, str + 1, strlen(str));
+	}
+}
+
+
 int main (int argc, char **argv)
 {
+	srand(time(NULL));
+	char sname1[300];
+	char sname2[300];
+
 	init();
 	if (argc <= 1) { yyerror("no file specified"); exit(1); }
 	yyin = fopen(argv[1],"r");
 	if (!yyparse())
-	{
-		printf("\n\n");
-		execute_strategy("Bad", CHEAT);
-	}
+		{
+			while(1)
+			{
+				printf("\n\n");
+				scanf("%[^,],%s", sname1, sname2);
+				remove_leading_newline(sname1);
+				remove_leading_newline(sname2);
+				strategy_fight(sname1, sname2);
+			}
+		}
 	// if (!yyparse()) printf("\nSuccess\n"); else printf("\nFailure\n");
 	return 0;
 }
