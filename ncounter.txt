@@ -13,3 +13,29 @@ Strategy Rand
 		return Cheat
 	return Honest
 
+Strategy Majority # dÃ©cide en fonction de la majoritÃ©
+# des dÃ©cisions de l'autre
+	def good = 0
+	def bad = 0
+	if last == Honest
+		good = good+1;
+	if last == Cheat
+		bad = bad+1;
+	if good >= bad
+		return Honest
+	else
+		return Cheat
+
+
+Strategy TitForTat		# donnant-donnant
+	if last == Undef
+		return Honest
+	else
+		return last
+
+
+Strategy Grim			# rancunier
+	def decision = Honest
+	if last == Cheat
+		decision = Cheat;
+	return decision

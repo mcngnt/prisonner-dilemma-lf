@@ -139,7 +139,7 @@ int finished_exec = 0;
 %type <e> expr
 %type <s> stmt assign
 
-%token S_BEGIN S_END SEQ EQUAL LESS LESSEQ GREATER GREATEREQ PLUS MINUS DEF ASSIGN WHILE IF ELSE PRINT RANDOM STRATEGY RETURN LAST
+%token S_BEGIN S_END SEQ EQUAL LESS LESSEQ GREATER GREATEREQ PLUS MINUS DEF ASSIGN WHILE IF ELSE PRINT RANDOM STRATEGY RETURN LAST CONSTANTS
 %token <i> VAR
 %token <x> INT
 
@@ -204,6 +204,9 @@ expr : VAR		{ $$ = make_expr(0,0,find_var($1),NULL,NULL); }
 	| expr PLUS expr { $$ = make_expr(PLUS,0,NULL,$1,$3); }
 	| expr MINUS expr { $$ = make_expr(MINUS,0,NULL,$1,$3); }
 	| expr LESS expr { $$ = make_expr(LESS,0,NULL,$1,$3); }
+	| expr LESSEQ expr { $$ = make_expr(LESS,0,NULL,$1,$3); }
+	| expr GREATER expr { $$ = make_expr(LESS,0,NULL,$1,$3); }
+	| expr GREATEREQ expr { $$ = make_expr(LESS,0,NULL,$1,$3); }
 	| expr EQUAL expr { $$ = make_expr(EQUAL,0,NULL,$1,$3); }
 	| '(' expr ')'	{ $$ = $2; }
 	| LAST {$$ = make_expr(LAST,0,NULL,NULL,NULL);}

@@ -15,7 +15,7 @@
 // #define DEBUG_PRINT(token) 
 // #endif
 
-#define DEBUG_PRINT(token) printf(token);
+#define DEBUG_PRINT(token) printf("%s%d | ",token, *yytext);
 
 
 #ifdef DEBUG
@@ -70,6 +70,13 @@ DIG	[0-9]
 
 <indent>"\t" { current_line_indent++ ;}
 
+<indent>"#" {
+	unput(*yytext);
+	current_line_indent = 0;
+	BEGIN normal;
+}
+
+
 
 
 <indent>"else" {
@@ -108,7 +115,7 @@ DIG	[0-9]
 				BEGIN normal;
 				if(*yytext != '#')
 				{
-					DEBUG_PRINT("SEQ "); return SEQ;
+					DEBUG_PRINT("SEQ2 "); return SEQ;
 				}
 			}
 		  }
@@ -144,6 +151,7 @@ DIG	[0-9]
 <normal>"Random"	{ DEBUG_PRINT("RANDOM "); return RANDOM; }
 
 <normal>"Strategy"	{ DEBUG_PRINT("STRATEGY "); return STRATEGY; }
+<normal>"Constants"	{ DEBUG_PRINT("CONSTANTS "); return CONSTANTS; }
 <normal>"return"	{ DEBUG_PRINT("RETURN "); return RETURN; }
 
 <normal>"last"	{ DEBUG_PRINT("LAST "); return LAST; }
@@ -217,7 +225,7 @@ DIG	[0-9]
 			else
 			{
 				has_seq_been_printed = 1;
-				DEBUG_PRINT("SEQ "); return SEQ;
+				DEBUG_PRINT("SEQ1 "); return SEQ;
 			}
 		}
 	}
