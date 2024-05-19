@@ -39,6 +39,9 @@
 #define VAR 19
 #define INT 20
 #define LAST 21
+#define LESSEQ 22
+#define GREATER 23
+#define GREATEREQ 24
 
 #endif
 
@@ -69,12 +72,31 @@ DIG	[0-9]
 
 
 
+<indent>"else" {
+	if(has_else_end_been_printed == 0)
+	{
+		unput('e');unput('s');unput('l');unput('e');
+		has_else_end_been_printed = 1;
+		indent_level--;
+		DEBUG_PRINT("S_END2 "); return S_END;
+	}
+	else
+	{
+		has_else_end_been_printed = 0;
+		BEGIN normal;
+		DEBUG_PRINT("ELSE "); return ELSE;
+	}
+
+}
+
+
+
 <indent>. {
 			unput(*yytext);
 			if(current_line_indent < indent_level)
 			{
 				indent_level--;
-				DEBUG_PRINT("S_END "); return S_END;
+				DEBUG_PRINT("S_END1 "); return S_END;
 			}
 			else if(current_line_indent > indent_level)
 			{
@@ -84,7 +106,10 @@ DIG	[0-9]
 			else
 			{
 				BEGIN normal;
-				DEBUG_PRINT("SEQ "); return SEQ;
+				if(*yytext != '#')
+				{
+					DEBUG_PRINT("SEQ "); return SEQ;
+				}
 			}
 		  }
 
@@ -97,7 +122,7 @@ DIG	[0-9]
 
 <normal>";" {}
 
-<normal>"#"[^\n]*"\n"	{ unput(*yytext); DEBUG_PRINT("SEQ "); return SEQ; }
+<normal>"#"[^\n]*"\n"	{ unput('\n'); }
 
 
 <normal>"==" { DEBUG_PRINT("EQUAL "); return EQUAL; }

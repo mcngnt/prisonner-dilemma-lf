@@ -1,10 +1,10 @@
-%error-verbose
 
 %{
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 
 #define CHEAT 0
@@ -117,6 +117,8 @@ int found_strategy = 0;
 char* startegy_name;
 int last_move = UNDEF;
 
+int finished_exec = 0;
+
 
 %}
 
@@ -183,8 +185,8 @@ stmt :
 		{ $$ = make_stmt(PRINT,find_var($2),NULL,NULL,NULL,NULL); }
 	| IF expr S_BEGIN stmt S_END	%prec else_priority
 		{ $$ = make_stmt(IF,NULL,$2,$4,NULL,NULL); }
-	| IF expr S_BEGIN stmt S_END SEQ ELSE S_BEGIN stmt S_END
-		{ $$ = make_stmt(ELSE,NULL,$2,$4,$9,NULL); }
+	| IF expr S_BEGIN stmt S_END ELSE S_BEGIN stmt S_END
+		{ $$ = make_stmt(ELSE,NULL,$2,$4,$8,NULL); }
 	| STRATEGY VAR S_BEGIN stmt S_END
 		{ $$ = make_stmt(STRATEGY,make_var($2),NULL,$4,NULL,NULL); }
 	| RETURN expr
@@ -198,15 +200,15 @@ assign	: VAR ASSIGN expr
 
 
 expr : VAR		{ $$ = make_expr(0,0,find_var($1),NULL,NULL); }
-	| INT		{ $$ = make_expr(INT,$1,NULL,NULL,NULL); }
-	| expr PLUS expr { $$ = make_expr(PLUS,NULL,NULL,$1,$3); }
-	| expr MINUS expr { $$ = make_expr(MINUS,NULL,NULL,$1,$3); }
-	| expr LESS expr { $$ = make_expr(LESS,NULL,NULL,$1,$3); }
-	| expr EQUAL expr { $$ = make_expr(EQUAL,NULL,NULL,$1,$3); }
+	| INT		{ $$ = make_expr(INT,$1,0,NULL,NULL); }
+	| expr PLUS expr { $$ = make_expr(PLUS,0,NULL,$1,$3); }
+	| expr MINUS expr { $$ = make_expr(MINUS,0,NULL,$1,$3); }
+	| expr LESS expr { $$ = make_expr(LESS,0,NULL,$1,$3); }
+	| expr EQUAL expr { $$ = make_expr(EQUAL,0,NULL,$1,$3); }
 	| '(' expr ')'	{ $$ = $2; }
-	| LAST {$$ = make_expr(LAST,NULL,NULL,NULL,NULL);}
+	| LAST {$$ = make_expr(LAST,0,NULL,NULL,NULL);}
 	| RANDOM INT
-		{ $$ = make_expr(RANDOM,NULL,NULL,make_expr(INT,$2,NULL,NULL,NULL),NULL); }
+		{ $$ = make_expr(RANDOM,$2,NULL,NULL,NULL); }
 
 
 %%
@@ -230,7 +232,7 @@ int eval (expr *e)
 		case GREATER : return eval(e->left) > eval(e->right);
 		case GREATEREQ : return eval(e->left) >= eval(e->right);
 		case LAST : return last_move;
-		case RANDOM : return rand() % (eval(e->left));
+		case RANDOM : return rand() % e->value;
 	}
 }
 
@@ -241,6 +243,10 @@ void print_var (var *v)
 
 void execute (stmt *s)
 {
+	if(finished_exec)
+	{
+		return;
+	}
 	switch(s->type)
 	{
 		case STRATEGY:
@@ -255,7 +261,10 @@ void execute (stmt *s)
 			break;
 		case RETURN:
 			current_result = eval(s->expr);
-			return;
+			if(found_strategy)
+			{
+				finished_exec = 1;
+			}
 			break;
 		case ASSIGN:
 			s->var->value = eval(s->expr);
@@ -283,17 +292,16 @@ void execute (stmt *s)
 
 int execute_strategy(char* name, int last)
 {
+	finished_exec = 0;
 	found_strategy = 0;
 	startegy_name = name;
 	last_move = last;
 	current_result = UNDEF;
-	// printf("Strategy %s :  \n", name);
 	execute(program_stmts);
 	if(found_strategy == 0)
 	{
 		printf("Strategy %s not found\n", name);
 	}
-	// printf("Strategy Result : %d\n", current_result);
 	return current_result;
 }
 

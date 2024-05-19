@@ -1,4 +1,4 @@
-Strategy Nice
+Strategy Nice # mdr
 	def x = Honest
 	return Honest
 
@@ -8,11 +8,8 @@ Strategy Bad
 	return x
 
 
-
-
 Strategy Rand
 	if Random(2) < 1
 		return Cheat
-	else
-		return Honest
+	return Honest
 
