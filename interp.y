@@ -625,7 +625,12 @@ void run_simulation()
 
             handle_meeting(idx1, idx2);
             handle_reproduction(idx1);
-            // handle_reproduction(idx2);
+            handle_reproduction(idx2);
+
+            if(population_size <= 1)
+            {
+            	return;
+            }
         }
         print_statistics(interval);
     }
