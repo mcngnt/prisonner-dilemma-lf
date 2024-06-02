@@ -172,6 +172,14 @@ int total_weight = 0;
 
 
 %left SEQ
+%left GREATEREQ
+%left GREATER
+%left LESS
+%left LESSEQ
+%left PLUS
+%left MINUS
+%left EQUAL
+
 
 %%
 
@@ -198,6 +206,8 @@ def : DEF VAR
 	}
 
 stmt : 
+	/* empty */
+	    { $$ = NULL; }
 	| def
 	|assign
 	| stmt SEQ stmt
@@ -667,7 +677,7 @@ int main (int argc, char **argv)
 	if (!yyparse())
 		{
 			printf("Population Simulation : \n");
-			simulate_population();
+			// simulate_population();
 			printf("\n\n\nTo make two startegies fight each other write Strat1,Start2 : \n\n");
 			while(1)
 			{
