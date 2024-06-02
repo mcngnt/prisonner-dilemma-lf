@@ -677,7 +677,7 @@ int main (int argc, char **argv)
 	if (!yyparse())
 		{
 			printf("Population Simulation : \n");
-			// simulate_population();
+			simulate_population();
 			printf("\n\n\nTo make two startegies fight each other write Strat1,Start2 : \n\n");
 			while(1)
 			{
