@@ -15,7 +15,10 @@
 // #define DEBUG_PRINT(token) 
 // #endif
 
-#define DEBUG_PRINT(token) printf("%s%d | ",token, *yytext);
+// #define DEBUG_PRINT(token) printf("%s%d | ",token, *yytext);
+
+
+#define DEBUG_PRINT(token) printf("%s",token);
 
 
 #ifdef DEBUG
@@ -42,6 +45,8 @@
 #define LESSEQ 22
 #define GREATER 23
 #define GREATEREQ 24
+#define ASSIGNC 25
+#define CONSTANTS 26
 
 #endif
 
@@ -55,6 +60,9 @@ int has_seq_been_printed = 0;
 int has_var_been_stored = 0;
 
 int has_else_end_been_printed = 0;
+
+int setting_constants = 0;
+
 
 %}
 
@@ -141,7 +149,16 @@ DIG	[0-9]
 <normal>"-"	{ DEBUG_PRINT("MINUS "); return MINUS; }
 
 <normal>"def"	{ is_var_to_print = 1; has_seq_been_printed = 0; has_var_been_stored = 0; DEBUG_PRINT("DEF "); return DEF; }
-<normal>"="	{ DEBUG_PRINT("ASSIGN "); return ASSIGN; }
+<normal>"="	{ if (setting_constants)
+			  {
+			  	DEBUG_PRINT("ASSIGNC "); return ASSIGNC;
+			  }
+			  else
+			  {
+			  	DEBUG_PRINT("ASSIGN "); return ASSIGN;
+			  }
+
+}
 
 <normal>"while"	{ DEBUG_PRINT("WHILE "); return WHILE; }
 <normal>"if"	{ DEBUG_PRINT("IF "); return IF; }
@@ -151,7 +168,7 @@ DIG	[0-9]
 <normal>"Random"	{ DEBUG_PRINT("RANDOM "); return RANDOM; }
 
 <normal>"Strategy"	{ DEBUG_PRINT("STRATEGY "); return STRATEGY; }
-<normal>"Constants"	{ DEBUG_PRINT("CONSTANTS "); return CONSTANTS; }
+<normal>"Constants"	{ setting_constants = 1;DEBUG_PRINT("CONSTANTS "); return CONSTANTS; }
 <normal>"return"	{ DEBUG_PRINT("RETURN "); return RETURN; }
 
 <normal>"last"	{ DEBUG_PRINT("LAST "); return LAST; }

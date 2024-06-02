@@ -525,7 +525,10 @@ char *yytext;
 // #define DEBUG_PRINT(token) 
 // #endif
 
-#define DEBUG_PRINT(token) printf("%s%d | ",token, *yytext);
+// #define DEBUG_PRINT(token) printf("%s%d | ",token, *yytext);
+
+
+#define DEBUG_PRINT(token) printf("%s",token);
 
 
 #ifdef DEBUG
@@ -552,6 +555,8 @@ char *yytext;
 #define LESSEQ 22
 #define GREATER 23
 #define GREATEREQ 24
+#define ASSIGNC 25
+#define CONSTANTS 26
 
 #endif
 
@@ -566,9 +571,12 @@ int has_var_been_stored = 0;
 
 int has_else_end_been_printed = 0;
 
-#line 570 "<stdout>"
+int setting_constants = 0;
 
-#line 572 "<stdout>"
+
+#line 578 "<stdout>"
+
+#line 580 "<stdout>"
 
 #define INITIAL 0
 #define normal 1
@@ -787,12 +795,12 @@ YY_DECL
 		}
 
 	{
-#line 67 "interplex.l"
+#line 75 "interplex.l"
 
 
 
 
-#line 796 "<stdout>"
+#line 804 "<stdout>"
 
 	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
@@ -851,12 +859,12 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 71 "interplex.l"
+#line 79 "interplex.l"
 { current_line_indent++ ;}
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 73 "interplex.l"
+#line 81 "interplex.l"
 {
 	unput(*yytext);
 	current_line_indent = 0;
@@ -865,7 +873,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 82 "interplex.l"
+#line 90 "interplex.l"
 {
 	if(has_else_end_been_printed == 0)
 	{
@@ -885,7 +893,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 101 "interplex.l"
+#line 109 "interplex.l"
 {
 			unput(*yytext);
 			if(current_line_indent < indent_level)
@@ -911,7 +919,7 @@ YY_RULE_SETUP
 case 5:
 /* rule 5 can match eol */
 YY_RULE_SETUP
-#line 124 "interplex.l"
+#line 132 "interplex.l"
 {
 		indent_level =  current_line_indent;
 		current_line_indent = 0;
@@ -920,108 +928,117 @@ YY_RULE_SETUP
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 130 "interplex.l"
+#line 138 "interplex.l"
 {}
 	YY_BREAK
 case 7:
 /* rule 7 can match eol */
 YY_RULE_SETUP
-#line 132 "interplex.l"
+#line 140 "interplex.l"
 { unput('\n'); }
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 135 "interplex.l"
+#line 143 "interplex.l"
 { DEBUG_PRINT("EQUAL "); return EQUAL; }
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 136 "interplex.l"
+#line 144 "interplex.l"
 {DEBUG_PRINT("LESS "); return LESS; }
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 137 "interplex.l"
+#line 145 "interplex.l"
 {DEBUG_PRINT("LESSEQ "); return LESSEQ; }
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 138 "interplex.l"
+#line 146 "interplex.l"
 {DEBUG_PRINT("GREATER "); return GREATER; }
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 139 "interplex.l"
+#line 147 "interplex.l"
 {DEBUG_PRINT("GREATEREQ "); return GREATEREQ; }
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 140 "interplex.l"
+#line 148 "interplex.l"
 { DEBUG_PRINT("PLUS "); return PLUS; }
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 141 "interplex.l"
+#line 149 "interplex.l"
 { DEBUG_PRINT("MINUS "); return MINUS; }
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 143 "interplex.l"
+#line 151 "interplex.l"
 { is_var_to_print = 1; has_seq_been_printed = 0; has_var_been_stored = 0; DEBUG_PRINT("DEF "); return DEF; }
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 144 "interplex.l"
-{ DEBUG_PRINT("ASSIGN "); return ASSIGN; }
+#line 152 "interplex.l"
+{ if (setting_constants)
+			  {
+			  	DEBUG_PRINT("ASSIGNC "); return ASSIGNC;
+			  }
+			  else
+			  {
+			  	DEBUG_PRINT("ASSIGN "); return ASSIGN;
+			  }
+
+}
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 146 "interplex.l"
+#line 163 "interplex.l"
 { DEBUG_PRINT("WHILE "); return WHILE; }
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 147 "interplex.l"
+#line 164 "interplex.l"
 { DEBUG_PRINT("IF "); return IF; }
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 148 "interplex.l"
+#line 165 "interplex.l"
 { DEBUG_PRINT("ELSE "); return ELSE; }
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 150 "interplex.l"
+#line 167 "interplex.l"
 { DEBUG_PRINT("PRINT "); return PRINT; }
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 151 "interplex.l"
+#line 168 "interplex.l"
 { DEBUG_PRINT("RANDOM "); return RANDOM; }
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 153 "interplex.l"
+#line 170 "interplex.l"
 { DEBUG_PRINT("STRATEGY "); return STRATEGY; }
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 154 "interplex.l"
-{ DEBUG_PRINT("CONSTANTS "); return CONSTANTS; }
+#line 171 "interplex.l"
+{ setting_constants = 1;DEBUG_PRINT("CONSTANTS "); return CONSTANTS; }
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 155 "interplex.l"
+#line 172 "interplex.l"
 { DEBUG_PRINT("RETURN "); return RETURN; }
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 157 "interplex.l"
+#line 174 "interplex.l"
 { DEBUG_PRINT("LAST "); return LAST; }
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 160 "interplex.l"
+#line 177 "interplex.l"
 {
 					#ifndef DEBUG
 						yylval.x = atoi(yytext); 
@@ -1031,7 +1048,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 167 "interplex.l"
+#line 184 "interplex.l"
 { 
 	#ifndef DEBUG
 		yylval.x = 2; 
@@ -1041,7 +1058,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 174 "interplex.l"
+#line 191 "interplex.l"
 {
 					#ifndef DEBUG
 						yylval.x = 0; 
@@ -1051,7 +1068,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-#line 180 "interplex.l"
+#line 197 "interplex.l"
 {
 					#ifndef DEBUG
 						yylval.x = 1; 
@@ -1061,7 +1078,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-#line 186 "interplex.l"
+#line 203 "interplex.l"
 {
 					#ifndef DEBUG
 						yylval.x = 0; 
@@ -1071,7 +1088,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
-#line 192 "interplex.l"
+#line 209 "interplex.l"
 {
 					#ifndef DEBUG
 						yylval.x = 1; 
@@ -1081,7 +1098,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
-#line 200 "interplex.l"
+#line 217 "interplex.l"
 { 	
 							if(!has_var_been_stored)
 							{
@@ -1096,7 +1113,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 33:
 YY_RULE_SETUP
-#line 213 "interplex.l"
+#line 230 "interplex.l"
 {
 		if(is_var_to_print && has_var_been_stored)
 		{
@@ -1120,7 +1137,7 @@ YY_RULE_SETUP
 case YY_STATE_EOF(INITIAL):
 case YY_STATE_EOF(normal):
 case YY_STATE_EOF(indent):
-#line 235 "interplex.l"
+#line 252 "interplex.l"
 { 
 			if(current_line_indent > 0 || indent_level > 0)
 			{
@@ -1137,10 +1154,10 @@ case YY_STATE_EOF(indent):
 	YY_BREAK
 case 34:
 YY_RULE_SETUP
-#line 249 "interplex.l"
+#line 266 "interplex.l"
 ECHO;
 	YY_BREAK
-#line 1144 "<stdout>"
+#line 1161 "<stdout>"
 
 	case YY_END_OF_BUFFER:
 		{
@@ -2143,7 +2160,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 249 "interplex.l"
+#line 266 "interplex.l"
 
 
 
