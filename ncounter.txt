@@ -42,12 +42,12 @@ Strategy Majority		# dÃ©cide en fonction de la majoritÃ©
 		return Cheat
 
 Constants
-	duration = 2		# durÃ©e d'une interaction entre deux invidus
-	meetings = 10000	# nb d'interactions dans un interval
-	intervals = 100		# nb d'intervals
+	duration = 10		# durÃ©e d'une interaction entre deux invidus
+	meetings = 100	# nb d'interactions dans un interval
+	intervals = 1000		# nb d'intervals
 	initial = 1000		# taille initiale de la population
 	life = 10		# nb d'interactions dans la vie d'un individu
-	spawn = 180		# profit initialement requis pour progÃ©nÃ©rer
+	spawn = 150		# profit initialement requis pour progÃ©nÃ©rer
 	mutation = 10		# probabilitÃ© mutation (pourcentage)
 	rewardHH = 3		# profit pour honnÃªte si l'autre est honnÃªte
 	rewardHC = 0		# profit pour honnÃªte si l'autre triche

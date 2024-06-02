@@ -10,26 +10,24 @@
 #define CHEAT 0
 #define HONEST 1
 #define UNDEF 2
+#define MAX_POP 100000
 
 int yylex();
 
 void yyerror(char *s)
 {
 	fflush(stdout);
-	fprintf(stderr, "%s\n", s);
 }
 
-/***************************************************************************/
-/* Data structures for storing a programme.                                */
 
-typedef struct var	// a variable
+typedef struct var
 {
 	char *name;
 	int value;
 	struct var *next;
 } var;
 
-typedef struct expr	// boolean expression
+typedef struct expr
 {
 	int type;
 	int value;
@@ -37,9 +35,9 @@ typedef struct expr	// boolean expression
 	struct expr *left, *right;
 } expr;
 
-typedef struct stmt	// command
+typedef struct stmt
 {
-	int type;	// ASSIGN, ';', WHILE, PRINT, IF
+	int type;
 	var *var;
 	expr *expr;
 	struct stmt *left, *right;
@@ -52,15 +50,20 @@ typedef struct stmtlist
 	struct stmtlist *next;
 } stmtlist;
 
-/****************************************************************************/
-/* All data pertaining to the programme are accessible from these two vars. */
+
+
+typedef struct {
+    char *strat;
+    int health;
+    int points;
+} individual;
+
+
 
 var *program_vars;
 stmt *program_stmts;
 stmtlist *strategies;
 
-/****************************************************************************/
-/* Functions for setting up data structures at parse time.                 */
 
 stmtlist* make_stmtlist (stmt *s)
 {
@@ -113,12 +116,14 @@ stmt* make_stmt (int type, var *var, expr *expr,
 }
 
 
+
+int strategy_nb = 0;
+
 int current_result = -1;
-// int found_strategy = 0;
-// char* startegy_name;
 int last_move = UNDEF;
 
-// int finished_exec = 0;
+int strategy_1_points;
+int strategy_2_points;
 
 
 
@@ -128,13 +133,22 @@ int rewardHC = 0;
 int rewardCH = 5;
 int rewardCC = 1;
 
+int meetings = 10000;
+int intervals = 100;
+int initial = 1000;
+int life = 10;
+int spawn = 180;
+int mutation = 10;
+
+
+
+individual population[MAX_POP];
+int population_size;
+int total_weight = 0;
 
 
 %}
 
-/****************************************************************************/
-
-/* types used by terminals and non-terminals */
 
 %union {
 	char *i;
@@ -198,11 +212,12 @@ stmt :
 		{ $$ = make_stmt(ELSE,NULL,$2,$4,$8, 0); }
 	| STRATEGY VAR S_BEGIN stmt S_END
 		{
-			stmt *s = make_stmt(STRATEGY,make_var($2),NULL,$4,NULL, 0);
+			stmt *s = make_stmt(STRATEGY,make_var($2),NULL,$4,NULL, 1);
 			$$ = s;
 			stmtlist *slist = make_stmtlist(s);
 			slist->next = strategies;
 			strategies = slist;
+			strategy_nb++;
 		}
 	| STRATEGY VAR INT S_BEGIN stmt S_END
 		{
@@ -211,6 +226,7 @@ stmt :
 			stmtlist *slist = make_stmtlist(s);
 			slist->next = strategies;
 			strategies = slist;
+			strategy_nb++;
 		}
 	| RETURN expr
 		{ $$ = make_stmt(RETURN,NULL,$2,NULL,NULL, 0); }
@@ -244,6 +260,34 @@ assign	:
 			{
 				rewardHH = $3;
 			}
+			if (strcmp($1, "rewardHH") == 0)
+			{
+				rewardHH = $3;
+			}
+			if (strcmp($1, "meetings") == 0)
+			{
+				meetings = $3;
+			}
+			if (strcmp($1, "intervals") == 0)
+			{
+				intervals = $3;
+			}
+			if (strcmp($1, "initial") == 0)
+			{
+				initial = $3;
+			}
+			if (strcmp($1, "life") == 0)
+			{
+				life = $3;
+			}
+			if (strcmp($1, "spawn") == 0)
+			{
+				spawn = $3;
+			}
+			if (strcmp($1, "mutation") == 0)
+			{
+				mutation = $3;
+			}
 		}
 
 
@@ -266,8 +310,10 @@ expr : VAR		{ $$ = make_expr(0,0,find_var($1),NULL,NULL); }
 
 #include "interplex.c"
 
-/****************************************************************************/
-/* programme interpreter      :                                             */
+
+
+
+
 
 int eval (expr *e)
 {
@@ -279,43 +325,43 @@ int eval (expr *e)
 	switch (e->type)
 	{
 		case 0:
-			printf("VAL(%d)", e->var->value);
+			// printf("VAL(%d)", e->var->value);
 			return e->var->value;
 			break;
 		case INT :
-			printf("INT(%d)", e->value);
+			// printf("INT(%d)", e->value);
 			return e->value;
 			break;
 		case PLUS :
-			printf(" + ");
+			// printf(" + ");
 			return e1 + eval(e->right);
 			break;
 		case MINUS :
-			printf(" - ");
+			// printf(" - ");
 			return e1 - eval(e->right);
 			break;
 		case EQUAL :
-			printf(" == ");
+			// printf(" == ");
 			return e1 == eval(e->right);
 			break;
 		case LESS :
-			printf(" < ");
+			// printf(" < ");
 			return e1 < eval(e->right);
 			break;
 		case LESSEQ :
-			printf(" <= ");
+			// printf(" <= ");
 			return e1 <= eval(e->right);
 			break;
 		case GREATER :
-			printf(" > ");
+			// printf(" > ");
 			return e1 > eval(e->right);
 			break;
 		case GREATEREQ :
-			printf(" >= ");
+			// printf(" >= ");
 			return e1 >= eval(e->right);
 			break;
 		case LAST :
-			printf("LAST");
+			// printf("LAST");
 			return last_move;
 			break;
 		case RANDOM :
@@ -334,19 +380,19 @@ void execute (stmt *s)
 	switch(s->type)
 	{
 		case RETURN:
-			printf("RETURN\t \n");
+			// printf("RETURN\t \n");
 			current_result = eval(s->expr);
 			break;
 		case ASSIGN:
-			printf("ASSIGN\t ");
+			// printf("ASSIGN\t ");
 			s->var->value = eval(s->expr);
 			break;
 		case SEQ:
-			printf("SEQ(\n");
+			// printf("SEQ(\n");
 			execute(s->left);
-			printf(",\n");
+			// printf(",\n");
 			execute(s->right);
-			printf("\n)");
+			// printf("\n)");
 			break;
 		case WHILE:
 			while (eval(s->expr))
@@ -359,28 +405,28 @@ void execute (stmt *s)
 			puts("");
 			break;
 		case IF:
-			printf("IF(\n");
+			// printf("IF(\n");
 			if (eval(s->expr))
 			{
-				printf(")\n{\n");
+				// printf(")\n{\n");
 				execute(s->left);
-				printf("}\n");
+				// printf("}\n");
 			}
-			printf(")\n");
+			// printf(")\n");
 			break;
 		case ELSE:
-			printf("IF(\n");
+			// printf("IF(\n");
 			if (eval(s->expr))
 			{
-				printf(")\n{");
+				// printf(")\n{");
 				execute(s->left);
-				printf("}\n");
+				// printf("}\n");
 			}
 			else
 			{
-				printf(")\nELSE\n{");
+				// printf(")\nELSE\n{");
 				execute(s->right);
-				printf("}\n");
+				// printf("}\n");
 			}
 			break;
 	}
@@ -388,34 +434,25 @@ void execute (stmt *s)
 
 int execute_strategy(char* name, int last)
 {
-	// finished_exec = 0;
-	// found_strategy = 0;
-	// startegy_name = name;
-	// current_result = UNDEF;
-	// execute(program_stmts);
-	// printf("\n------------\n");	
-	// if(found_strategy == 0)
-	// {
-	// 	printf("Strategy %s not found\n", name);
-	// }
 	last_move = last;
 	stmtlist *currstrat = strategies;
 	while(currstrat != NULL)
 	{
 		if (strcmp(name, currstrat->stmt->var->name) == 0)
 		{
-			printf("%s : \n", currstrat->stmt->var->name);
+			// printf("%s : \n", currstrat->stmt->var->name);
 			execute(currstrat->stmt->left);
-			printf("----------\n");
+			// printf("----------\n");
 			return current_result;
 		}
 		currstrat = currstrat->next;
 	}
+	printf("Strategy %s not found\n", name);
 	return UNDEF;
 }
 
 
-void strategy_fight(char* name1, char* name2)
+void strategy_fight(char* name1, char* name2, int print_results)
 {
 	int last1 = UNDEF;
 	int last2 = UNDEF;
@@ -455,8 +492,150 @@ void strategy_fight(char* name1, char* name2)
 			}
 		}
 	}
+	strategy_1_points = points1;
+	strategy_2_points = points2;
+	if (print_results)
+	{
+		printf("Results : \n %s : %d points\n%s : %d points\n", name1, points1, name2, points2);
+	}
+}
 
-	printf("Results : \n %s : %d points\n%s : %d points\n", name1, points1, name2, points2);
+char* random_strategy()
+{
+	int rand_weight = rand() % total_weight;
+	int weight_sum = 0;
+	stmtlist *currstrat = strategies;
+	while(currstrat != NULL)
+	{
+		weight_sum += currstrat->stmt->value;
+	    if (rand_weight < weight_sum)
+	    {
+	    	return currstrat->stmt->var->name;
+	        break;
+	    }
+		currstrat = currstrat->next;
+	}
+	return NULL;
+}
+
+
+void initialize_population()
+{
+    stmtlist *currstrat = strategies;
+	while(currstrat != NULL)
+	{
+		total_weight += currstrat->stmt->value;
+		currstrat = currstrat->next;
+	}
+
+    for (int i = 0; i < initial; i++)
+    {
+    	population[i].strat = random_strategy();
+        population[i].health = life;
+        population[i].points = 0;
+    }
+    population_size = initial;
+}
+
+
+void handle_meeting(int idx1, int idx2)
+{
+    strategy_fight(population[idx1].strat, population[idx2].strat, 0);
+    population[idx1].points += strategy_1_points;
+    population[idx2].points += strategy_2_points;
+
+    population[idx1].health--;
+    population[idx2].health--;
+
+    if (population[idx1].health <= 0)
+    {
+    	population[idx1] = population[population_size - 1];
+        population_size--;
+    }
+
+    if (population[idx2].health <= 0)
+    {
+    	population[idx2] = population[population_size - 1];
+        population_size--;
+    }
+}
+
+void handle_reproduction(int idx)
+{
+    int spawn_threshold = spawn;
+
+    if (population[idx].health > 0 && population[idx].points >= spawn_threshold)
+    {
+        population[idx].points -= spawn_threshold;
+        int spawn_idx = population_size++;
+        population[spawn_idx].strat = population[idx].strat;
+        population[spawn_idx].health = life;
+        population[spawn_idx].points = 0;
+
+        if (rand() % 100 < mutation)
+        {
+            population[spawn_idx].strat = random_strategy();
+        }
+    }
+}
+
+void print_statistics(int interval)
+{
+    printf("Interval %d: Population size = %d\n", interval, population_size);
+
+    stmtlist *currstrat = strategies;
+	while(currstrat != NULL)
+	{
+		int count = 0;
+
+		for (int i = 0; i < population_size; ++i)
+		{
+			if (strcmp(population[i].strat, currstrat->stmt->var->name) == 0)
+			{
+                count++;
+            }
+		}
+
+		printf("%s : %d\n", currstrat->stmt->var->name, count);
+
+		currstrat = currstrat->next;
+	}
+
+	printf("----------\n\n");
+    // for (int i = 0; i < population_size; ++i)
+    // {
+    // 	printf("Individual %d : Strat : %s | Life : %d | Points %d\n", i, population[i].strat, population[i].health, population[i].points);
+    // }
+
+}
+
+void run_simulation()
+{
+    for (int interval = 0; interval < intervals; interval++)
+    {
+        for (int meeting = 0; meeting < meetings; meeting++)
+        {
+            int idx1 = rand() % population_size;
+            int idx2 = rand() % population_size;
+
+            while (idx1 == idx2)
+            {
+                idx2 = rand() % population_size;
+            }
+
+            handle_meeting(idx1, idx2);
+            handle_reproduction(idx1);
+            // handle_reproduction(idx2);
+        }
+        print_statistics(interval);
+    }
+}
+
+
+void simulate_population()
+{
+	initialize_population();
+	run_simulation();
 }
 
 /****************************************************************************/
@@ -482,15 +661,17 @@ int main (int argc, char **argv)
 	yyin = fopen(argv[1],"r");
 	if (!yyparse())
 		{
+			printf("Population Simulation : \n");
+			simulate_population();
+			printf("\n\n\nTo make two startegies fight each other write Strat1,Start2 : \n\n");
 			while(1)
 			{
 				printf("\n\n");
 				scanf("%[^,],%s", sname1, sname2);
 				remove_leading_newline(sname1);
 				remove_leading_newline(sname2);
-				strategy_fight(sname1, sname2);
+				strategy_fight(sname1, sname2, 1);
 			}
 		}
-	// if (!yyparse()) printf("\nSuccess\n"); else printf("\nFailure\n");
 	return 0;
 }

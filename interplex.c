@@ -519,16 +519,16 @@ char *yytext;
 // #define DEBUG
 
 
-// #ifdef DEBUG
-// #define DEBUG_PRINT(token) printf(token);
-// #else
-// #define DEBUG_PRINT(token) 
-// #endif
+#ifdef DEBUG
+#define DEBUG_PRINT(token) printf(token);
+#else
+#define DEBUG_PRINT(token) 
+#endif
 
 // #define DEBUG_PRINT(token) printf("%s%d | ",token, *yytext);
 
 
-#define DEBUG_PRINT(token) printf("%s",token);
+// #define DEBUG_PRINT(token) printf("%s",token);
 
 
 #ifdef DEBUG
